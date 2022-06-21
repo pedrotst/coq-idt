@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import utils All.
 (* This file converts a datatype to it's functorial representation *)
 (* Following the logic of dc-recursion/.../List.v *)
 
-(* We start by defining the datatype that we want make the conversation *)
+(* We start by defining the datatype that we want make the convertion *)
 (* This way we can avoid any issues with universes and whatnot *)
 (* Also notice that so far we work solely with Sets, working with Type is future work *)
 
