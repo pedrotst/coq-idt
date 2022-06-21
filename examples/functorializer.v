@@ -1,9 +1,12 @@
 From idt Require Import all.
 From MetaCoq.Template Require Import utils All.
 
-(* I'd suggest to re-define any datatype being functorialized *)
+(* This file converts a datatype to it's functorial representation *)
+(* Following the logic of dc-recursion/.../List.v *)
+
+(* We start by defining the datatype that we want make the conversation *)
 (* This way we can avoid any issues with universes and whatnot *)
-(* Also notice that so far we work solely with Sets, working with Type is TBD *)
+(* Also notice that so far we work solely with Sets, working with Type is future work *)
 
 Inductive list' (A : Set) : Set :=
 | nil'  : list' A
@@ -30,11 +33,12 @@ Notation Fname := "treeF".
 
 (* To transform the datatype to it's functorial representation *)
 (* The first step is to add (X : Set) as it's last parameter *)
-(* This is what we do here: *)
+(* X will be used as the "recursive call" of the datatype *)
 Definition newT : Type.
   let rec go x :=
     match x with
         | forall (A :?Z), ?M =>  refine (forall (A : Z), _); go M
+        (* Adds X as the last parameter *)
         | ?U => exact (forall (X : Set), U)
     end in
   let Ty := type of T in
@@ -80,6 +84,7 @@ Proof.
                           | forall A : ?S, ?U => refine (forall (A : S), _); go' U
                           (* If Cty appears as the return type, change it to R *)
                           | Cty => exact R
+                          (* TODO: Add other cases for more complex datatypes *)
                       end in
     go' Ty.
 Defined.
@@ -130,7 +135,7 @@ Notation "'unfolded' d" :=
 
 (* Update ind_gen from idt.v to accomodate the changes made to the parameters of *)
 (* the new datatype. *)
-(* ind_gen glues the datatype information together and then Metacoq synthesizes it *)
+(* ind_gen' glues the datatype information together so then Metacoq synthesizes it *)
 
 #[universes(polymorphic)]
 Definition ind_gen' (name : ident) (ctors : list (ident * term))
