@@ -52,7 +52,7 @@ Ltac concl_head T :=
 
 (** Get the list of constructors of an inductive type. *)
 Definition get_ctors {T : Type} (t : T)
-  : TemplateMonad (list (ident * typed_term)) :=
+  : TemplateMonad (list (ident * typed_term@{Type})) :=
   tm <- tmQuote t;;
   match tm with
   | tInd ind _ =>
@@ -61,13 +61,12 @@ Definition get_ctors {T : Type} (t : T)
      | Some body =>
          monad_map_i (fun i '(name, _, _) =>
                         tm <- tmUnquote (tConstruct ind i []);;
-                        ret (name, tm))
+                        ret (@pair _ typed_term name (tm : typed_term)))
                      body.(ind_ctors)
      | _ => tmFail "No body found"
      end
   | _ => tmFail "Not an inductive type"
   end.
-
 (* Copied from MetaCoq's repository. *)
 Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
   match n, t with
@@ -120,7 +119,7 @@ Ltac tsf_ctor_id ctor R :=
 Tactic Notation "tsf_ctors_id" constr(ind) := tsf_ctors ind id (tsf_ctor_id_ ind).
 
 (** This tactic does some post-processing to the list of target constructors. It
-removes all skipped cases and quotes the constructor types. *)
+removes all skipped cases and quotes the uonstructor types. *)
 Ltac tsf_ctors_to_tm ctors :=
   let rec go xs :=
     lazymatch xs with
@@ -234,7 +233,8 @@ Definition tsf_ind_gen_from {T : Type} (t : T) (name : ident)
            `{ty : @QuoteTermOf _ t}
            `{ctors : @CtorTermsOf _ cs}
   : TemplateMonad unit :=
-  '(mind, i) <- tsf_get_mind ty;; ind_gen name ctors mind i.
+  '(mind, i) <- tsf_get_mind ty;;
+  ind_gen name ctors mind i.
 
 (** This bidirectional hint is crucial if we want to use [app] to concatenate
 transformed constructor lists. Otherwise, Coq would be too dumb to propagate the
