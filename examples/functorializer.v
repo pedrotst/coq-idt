@@ -12,8 +12,8 @@ Inductive list' (A : Set) : Set :=
 | nil'  : list' A
 | cons' : A -> list' A -> list' A.
 
-Arguments nil' {A}.
-Arguments cons' {A} _ _.
+(* Arguments nil' {A}. *)
+(* Arguments cons' {A} _ _. *)
 
 Inductive tree (A B : Set) : Set :=
 | mempty : tree A B
@@ -29,7 +29,6 @@ Notation T := tree.
 Notation Fname := "treeF".
 
 (* ------------------------ *)
-
 
 (* To transform the datatype to it's functorial representation *)
 (* The first step is to add (X : Set) as it's last parameter *)
@@ -52,8 +51,11 @@ Proof.
 
   (* We introduce the signature of the datatype as R, *)
   (* and each one of it's constructor to the context  *)
+
   tsf_ctors T (fun s => append s "F") tsf_interact; unfold newT in R.
 
+
+  all: unfold newT in R.
   (* Now we refine each one of R parameters with `refine (forall A, _)` *)
   (* And apply each one to R, to build it's complete return type for each constructor *)
   all:
@@ -79,8 +81,10 @@ Proof.
     (* Finally, to functorialize each constructor do the following: *)
     let rec go' ty := match ty with
                         (* If Cty appears as a type, change it to X *)
+                          | Cty -> ?U => refine (X ->  _); go' U
                           | forall (A : Cty), ?U => refine (forall (A : X), _); go' U
                           (* Everything else remains unchanged *)
+                          | ?S -> ?U => refine (S -> _); go' U
                           | forall A : ?S, ?U => refine (forall (A : S), _); go' U
                           (* If Cty appears as the return type, change it to R *)
                           | Cty => exact R
@@ -152,7 +156,7 @@ Definition ind_gen' (name : ident) (ctors : list (ident * term))
       let indparam := map (fun '(s, t) => mk_indparam s t) params in
       let param_terms := map snd params in
       let lvls := flat_map get_level (ty_ret :: param_terms) in
-      let univ := Monomorphic_ctx (LevelSetProp.of_list lvls, ConstraintSet.empty) in
+      let univ := Monomorphic_ctx (LevelSetProp.of_list [], ConstraintSet.empty) in
       let ind' :=
         {| ind_finite := mind.(ind_finite);
            ind_npars := mind.(ind_npars) + 1;
@@ -167,7 +171,10 @@ Definition ind_gen' (name : ident) (ctors : list (ident * term))
                               ind_relevance := ind.(ind_relevance) |} ]
         |}
       in
+      (* t <- tmEval all ind' ;; *)
+      (* tmPrint t ;; *)
       tmMkInductive' ind'
+      (* tmReturn tt *)
   | _ => tmFail "No body found"
   end.
 
@@ -176,6 +183,7 @@ Definition ind_gen' (name : ident) (ctors : list (ident * term))
 MetaCoq Run (
           (* Quote T into metacoq *)
           '(mind, i) <- tsf_get_mind ltac:(quote_term T (fun t => exact t));;
+                                           (* tmReturn tt  *)
           (* Quotes the new types of the constructors into metacoq *)
           let ctorsT := ltac:(tsf_ctors_to_tm newT_ctors) in
           (* Synthesize the functorial representation of T as Fname *)
