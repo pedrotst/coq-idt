@@ -133,6 +133,7 @@ Fixpoint count_tProds' (n : nat)  (t : term) : nat :=
 
 Definition count_tProds := count_tProds' 0.
 
+
 (* ----------------------------------------------------- *)
 
 (* ind_gen' adapts [ind_gen] from idt.v to accomodate the changes made
@@ -178,6 +179,8 @@ Definition ind_gen' (T : Type) (name : ident) (ctors : list (ident * term))
   | _ => tmFail "No body found"
   end.
 
+Notation "'unfolded' d" :=
+  ltac:(let y := eval unfold d in d in exact y) (at level 100, only parsing).
 (* Generate the functorinal representation of lists: *)
 MetaCoq Run (let T := list' in
              let TName := "listF" in
@@ -221,7 +224,10 @@ Print treeF.
 
 (* ------- EDIT here ------ *)
 
-(* The term generated as Fname *)
+(* The Original Definition of the functor we want to work with *)
+Notation T := tree.
+
+(* The functor we want to work with *)
 Notation TF := treeF.
 
 (* ------------------------ *)
@@ -255,10 +261,6 @@ Ltac buildTF :=
 Definition TF_F : Set -> Set.
 Proof.
   intros X.
-  let rec go U := match U with
-                      | forall (A : Set), ?V => refine (forall (A: Set), (_ : Set)); go V
-                      | _ => idtac
-                  end in go T.
   intro_params T.
   revert X; intros X.
   buildTF.
@@ -337,6 +339,3 @@ Instance TFunctor : (unfolded TFFunctor_ty) :=
       fmapId := ltac:(eapply TFMapId; eauto)
   }.
 
-
-=======
->>>>>>> acf5fc9795e19540f28ee6be92113367cb164a10
