@@ -1,0 +1,4 @@
+-arg -impredicative-set
+-R . Examples
+
+./functorializer.v
