@@ -10,7 +10,8 @@ From MetaCoq.Template Require Import utils All.
 
 Inductive list' (A : Set) : Set :=
 | nil'  : list' A
-| cons' : A -> list' A -> list' A.
+| cons' : A
+ -> list' A -> list' A.
 
 (* Arguments nil' {A}. *)
 (* Arguments cons' {A} _ _. *)
@@ -27,6 +28,8 @@ Inductive tree (A B : Set) : Set :=
 Notation T := tree.
 (* Functor Name *)
 Notation Fname := "treeF".
+
+Reserved Notation "'x" (at level 100).
 
 (* ------------------------ *)
 
@@ -189,3 +192,119 @@ MetaCoq Run (
           (* Synthesize the functorial representation of T as Fname *)
           ind_gen' Fname ctorsT mind i
         ).
+
+(* ------- EDIT here ------ *)
+
+(* The term generated as Fname *)
+Notation TF := treeF.
+
+(* ------------------------ *)
+
+Definition FmapT(A B : Set)(F : Set -> Set) : Set := forall(f : A -> B), F A -> F B.
+
+Definition FmapId(F : Set -> Set)(fmap : forall{A B : Set}, FmapT A B F) : Set :=
+  forall (A : Set) (x : F A), fmap (fun x => x) x = x .
+
+Class Functor (F : Set -> Set) :=
+  {
+  fmap : forall {A B : Set}, FmapT A B F;
+  fmapId : FmapId F (@fmap)
+  }.
+
+Ltac intro_params S :=
+  let rec go U := match U with
+                      | forall (A : Set), ?V => refine (forall (A: Set), (_ : Set)); go V
+                      | _ => idtac
+                  end in
+  let SU := type of S in
+  go SU.
+
+Ltac buildTF :=
+  let rec go S := lazymatch goal with
+                      | [A : Set |- _ ] => refine (_ A); clear A; go S
+                      | _ => exact S
+                  end in
+  go TF.
+
+Definition TF_F : Set -> Set.
+Proof.
+  intros X.
+  intro_params T.
+  revert X; intros X.
+  buildTF.
+Defined.
+
+Definition TFMap_ty : Type.
+Proof.
+  intro_params T.
+  refine (forall X1 X2, FmapT X1 X2 (fun X => _)).
+  clear X1 X2.
+  buildTF.
+Defined.
+
+Ltac get_constr t :=
+  match goal with
+      | [ H : t = ?C |- _ ] => get_head C
+  end.
+
+
+Definition TFmap : TFMap_ty.
+Proof.
+  unfold TFMap_ty; intros.
+  unfold FmapT.
+  intros f t.
+
+  destruct t eqn:Teq;
+  let constr := get_constr t in pose constr as C;
+
+  match goal with
+      | [ H : t = ?C |- _ ] => pose C as ct
+  end;
+
+  let rec go c := match c with
+                      | ?C ?a => match type of a with
+                                   | X1 => refine (_ (f a)); go C
+                                   | _ => match a with
+                                             | X1 => refine (_ X2); go C
+                                             | _ => refine (_ a); go C
+
+                                         end
+                               end
+                      | _ => exact C
+                  end
+  in
+  let c := (eval unfold ct in ct) in
+  go c.
+Defined.
+
+(* Definition FmapId(F : Set -> Set)(fmap : forall{A B : Set}, FmapT A B F) : Set := *)
+(*   forall (A : Set) (x : F A), fmap (fun x => x) x = x . *)
+
+Definition TFFunctor_ty : Type.
+  intro_params T.
+  refine (Functor (fun X => _)).
+  buildTF.
+Defined.
+
+Hint Unfold TFFunctor_ty.
+
+
+Definition TFMapId_ty : Type.
+  intro_params T.
+  refine (FmapId ltac:(buildTF) _).
+  eapply TFmap.
+Defined.
+
+Definition TFMapId : TFMapId_ty.
+  unfold TFMapId_ty; intros.
+  unfold FmapId; intros X t.
+
+  destruct t; reflexivity.
+Defined.
+
+Instance TFunctor : (unfolded TFFunctor_ty) :=
+  { fmap := ltac:(eapply TFmap; eauto);
+      fmapId := ltac:(eapply TFMapId; eauto)
+  }.
+
+
